@@ -1,2 +1,6 @@
 from .face_analysis import *
-from .mask_renderer import *
+
+try:
+    from .mask_renderer import *
+except ImportError:
+    pass
