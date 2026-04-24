@@ -1,4 +1,4 @@
-# Face API + Camera Check
+# Face API + Web Camera Check
 
 ## Folder database
 
@@ -37,6 +37,7 @@ python face_api.py --face-db face_db --threshold 0.45
 API:
 
 ```text
+GET  /
 GET  /health
 GET  /people
 POST /reload-db
@@ -50,7 +51,22 @@ Moi lan them anh vao `face_db`, goi:
 curl -X POST http://127.0.0.1:8000/reload-db
 ```
 
-## Check bang camera
+## Check bang web
+
+Sau khi chay API, mo trinh duyet:
+
+```text
+http://127.0.0.1:8000
+```
+
+Trang web se:
+
+- mo camera tren browser
+- gui frame len Python API `/identify`
+- ve khung mat va hien ten/Unknown ngay tren man hinh
+- giu nguyen logic InsightFace + embedding + cosine similarity o backend
+
+## Check bang camera desktop
 
 Mo terminal thu hai:
 

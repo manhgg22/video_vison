@@ -7,6 +7,7 @@ from typing import Dict, List, Optional
 import cv2
 import numpy as np
 from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 
@@ -192,6 +193,10 @@ def create_app(database: FaceDatabase) -> FastAPI:
     @app.get("/health")
     def health() -> dict:
         return {"status": "ok", "people_count": len(database.people)}
+
+    @app.get("/")
+    def web_app() -> FileResponse:
+        return FileResponse(ROOT_DIR / "web" / "index.html")
 
     @app.get("/people", response_model=PeopleResponse)
     def people() -> PeopleResponse:
