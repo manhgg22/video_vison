@@ -1,0 +1,648 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Face Check</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Arial, Helvetica, sans-serif;
+      background: #111318;
+      color: #f4f6f8;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #111318;
+    }
+
+    .shell {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      min-height: 100vh;
+    }
+
+    .stage {
+      position: relative;
+      min-height: 100vh;
+      background: #05070a;
+      overflow: hidden;
+    }
+
+    video,
+    canvas.overlay {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    video {
+      background: #05070a;
+    }
+
+    .gate-banner {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 24px;
+      z-index: 2;
+      border: 1px solid #3a4350;
+      border-radius: 8px;
+      background: rgba(9, 12, 18, 0.86);
+      padding: 18px 20px;
+      backdrop-filter: blur(10px);
+    }
+
+    .gate-banner strong {
+      display: block;
+      font-size: clamp(28px, 4vw, 52px);
+      line-height: 1;
+      letter-spacing: 0;
+    }
+
+    .gate-banner span {
+      display: block;
+      margin-top: 8px;
+      color: #cbd3dd;
+      font-size: 15px;
+    }
+
+    .gate-banner.granted {
+      border-color: #14b8a6;
+      box-shadow: 0 0 0 2px rgba(20, 184, 166, 0.22);
+    }
+
+    .gate-banner.denied {
+      border-color: #f43f5e;
+      box-shadow: 0 0 0 2px rgba(244, 63, 94, 0.22);
+    }
+
+    .gate-banner.scanning {
+      border-color: #64748b;
+    }
+
+    .panel {
+      border-left: 1px solid #2a3039;
+      background: #171b22;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .muted {
+      margin: 0;
+      color: #9ba7b6;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    button {
+      min-height: 40px;
+      border: 1px solid #3a4350;
+      border-radius: 6px;
+      background: #222832;
+      color: #f4f6f8;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: #0f766e;
+      border-color: #0f766e;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    label {
+      display: grid;
+      gap: 6px;
+      font-size: 13px;
+      color: #cbd3dd;
+    }
+
+    input {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid #3a4350;
+      border-radius: 6px;
+      background: #10141b;
+      color: #f4f6f8;
+      padding: 0 10px;
+    }
+
+    select {
+      width: 100%;
+      min-height: 36px;
+      border: 1px solid #3a4350;
+      border-radius: 6px;
+      background: #10141b;
+      color: #f4f6f8;
+      padding: 0 10px;
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .stat {
+      border: 1px solid #2a3039;
+      border-radius: 6px;
+      padding: 10px;
+      background: #11161d;
+    }
+
+    .stat span {
+      display: block;
+      color: #9ba7b6;
+      font-size: 12px;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 20px;
+    }
+
+    .results {
+      display: grid;
+      gap: 8px;
+      max-height: 22vh;
+      overflow: auto;
+    }
+
+    .events {
+      display: grid;
+      gap: 8px;
+      max-height: 20vh;
+      overflow: auto;
+    }
+
+    .event {
+      border-left: 3px solid #64748b;
+      padding: 8px 10px;
+      background: #11161d;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+
+    .event.granted {
+      border-left-color: #14b8a6;
+    }
+
+    .event.denied {
+      border-left-color: #f43f5e;
+    }
+
+    .event span {
+      display: block;
+      margin-top: 3px;
+      color: #9ba7b6;
+      font-size: 12px;
+    }
+
+    .person {
+      border: 1px solid #2a3039;
+      border-radius: 6px;
+      padding: 10px;
+      background: #11161d;
+    }
+
+    .person strong {
+      display: block;
+      font-size: 15px;
+    }
+
+    .person span {
+      display: block;
+      margin-top: 4px;
+      color: #9ba7b6;
+      font-size: 12px;
+    }
+
+    .ok {
+      color: #5eead4;
+    }
+
+    .bad {
+      color: #fb7185;
+    }
+
+    @media (max-width: 900px) {
+      .shell {
+        grid-template-columns: 1fr;
+      }
+
+      .stage {
+        min-height: 62vh;
+      }
+
+      .panel {
+        border-left: 0;
+        border-top: 1px solid #2a3039;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="stage">
+      <video id="video" autoplay muted playsinline></video>
+      <canvas id="overlay" class="overlay"></canvas>
+      <canvas id="capture" hidden></canvas>
+      <div class="gate-banner scanning" id="gateBanner">
+        <strong id="gateTitle">SCANNING</strong>
+        <span id="gateDetail">Waiting for camera.</span>
+      </div>
+    </section>
+
+    <aside class="panel">
+      <header>
+        <h1>Face Check</h1>
+        <p class="muted" id="status">API is idle.</p>
+      </header>
+
+      <div class="controls">
+        <button class="primary" id="startBtn">Start</button>
+        <button id="stopBtn" disabled>Stop</button>
+        <button id="reloadBtn">Reload DB</button>
+        <button id="singleBtn" disabled>Check Now</button>
+      </div>
+
+      <label>
+        Camera
+        <select id="cameraSelect"></select>
+      </label>
+
+      <label>
+        Check interval ms
+        <input id="intervalInput" type="number" min="300" step="100" value="500">
+      </label>
+
+      <label>
+        Confirm frames
+        <input id="confirmInput" type="number" min="1" max="5" step="1" value="2">
+      </label>
+
+      <div class="stats">
+        <div class="stat">
+          <span>People</span>
+          <strong id="peopleCount">0</strong>
+        </div>
+        <div class="stat">
+          <span>Faces</span>
+          <strong id="faceCount">0</strong>
+        </div>
+        <div class="stat">
+          <span>Latency</span>
+          <strong id="latency">0 ms</strong>
+        </div>
+        <div class="stat">
+          <span>FPS</span>
+          <strong id="fps">0.0</strong>
+        </div>
+      </div>
+
+      <section>
+        <p class="muted">Latest result</p>
+        <div class="results" id="results"></div>
+      </section>
+
+      <section>
+        <p class="muted">Security events</p>
+        <div class="events" id="events"></div>
+      </section>
+
+      <p class="muted" id="runtime">Runtime: checking...</p>
+    </aside>
+  </main>
+
+  <script>
+    const video = document.getElementById("video");
+    const overlay = document.getElementById("overlay");
+    const capture = document.getElementById("capture");
+    const statusEl = document.getElementById("status");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
+    const reloadBtn = document.getElementById("reloadBtn");
+    const singleBtn = document.getElementById("singleBtn");
+    const cameraSelect = document.getElementById("cameraSelect");
+    const intervalInput = document.getElementById("intervalInput");
+    const confirmInput = document.getElementById("confirmInput");
+    const peopleCount = document.getElementById("peopleCount");
+    const faceCount = document.getElementById("faceCount");
+    const latency = document.getElementById("latency");
+    const fps = document.getElementById("fps");
+    const results = document.getElementById("results");
+    const events = document.getElementById("events");
+    const runtime = document.getElementById("runtime");
+    const gateBanner = document.getElementById("gateBanner");
+    const gateTitle = document.getElementById("gateTitle");
+    const gateDetail = document.getElementById("gateDetail");
+
+    let stream = null;
+    let timer = null;
+    let busy = false;
+    let lastResponse = { faces: [] };
+    let completedChecks = 0;
+    let statsStartedAt = performance.now();
+    let lastCandidate = null;
+    let stableCount = 0;
+    let lastEventKey = "";
+    let lastEventAt = 0;
+    let lastCaptureWidth = 0;
+    let lastCaptureHeight = 0;
+
+    async function loadPeople() {
+      const res = await fetch("/people");
+      const data = await res.json();
+      peopleCount.textContent = data.people.length;
+      statusEl.textContent = `Loaded ${data.people.length} people. Threshold ${data.threshold}.`;
+    }
+
+    async function loadRuntime() {
+      const res = await fetch("/runtime");
+      const data = await res.json();
+      runtime.textContent = `Runtime: ONNX Runtime ${data.onnxruntime_version} | ${data.active_providers.join(", ")} | ${data.device.toUpperCase()}`;
+    }
+
+    async function loadCameras() {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const cameras = devices.filter((device) => device.kind === "videoinput");
+      cameraSelect.innerHTML = "";
+      cameras.forEach((camera, index) => {
+        const option = document.createElement("option");
+        option.value = camera.deviceId;
+        option.textContent = camera.label || `Camera ${index + 1}`;
+        cameraSelect.appendChild(option);
+      });
+    }
+
+    async function startCamera() {
+      stopCamera();
+      const constraints = {
+        video: {
+          deviceId: cameraSelect.value ? { exact: cameraSelect.value } : undefined,
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        },
+        audio: false
+      };
+      stream = await navigator.mediaDevices.getUserMedia(constraints);
+      video.srcObject = stream;
+      await video.play();
+      await loadCameras();
+
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      singleBtn.disabled = false;
+      statusEl.textContent = "Security scanner is running.";
+      setGateState("scanning", "SCANNING", "Looking for a registered face.");
+      completedChecks = 0;
+      statsStartedAt = performance.now();
+      scheduleChecks();
+    }
+
+    function stopCamera() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+      if (stream) {
+        stream.getTracks().forEach((track) => track.stop());
+        stream = null;
+      }
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      singleBtn.disabled = true;
+      setGateState("scanning", "SCANNING", "Camera stopped.");
+      lastCandidate = null;
+      stableCount = 0;
+    }
+
+    function scheduleChecks() {
+      if (timer) {
+        clearInterval(timer);
+      }
+      const interval = Math.max(300, Number(intervalInput.value) || 700);
+      timer = setInterval(checkFrame, interval);
+      checkFrame();
+    }
+
+    async function checkFrame() {
+      if (!stream || busy || video.videoWidth === 0) {
+        return;
+      }
+      busy = true;
+      try {
+        const blob = await frameToBlob();
+        const form = new FormData();
+        form.append("file", blob, "frame.jpg");
+        const res = await fetch("/identify", { method: "POST", body: form });
+        if (!res.ok) {
+          throw new Error(await res.text());
+        }
+        lastResponse = await res.json();
+        renderResult(lastResponse);
+        completedChecks += 1;
+        updateRealtimeStats(lastResponse);
+        updateGate(lastResponse);
+        statusEl.textContent = "Security scanner is running.";
+      } catch (error) {
+        statusEl.textContent = `Error: ${error.message}`;
+      } finally {
+        busy = false;
+      }
+    }
+
+    function frameToBlob() {
+      const maxWidth = 640;
+      const scale = Math.min(1, maxWidth / video.videoWidth);
+      capture.width = Math.round(video.videoWidth * scale);
+      capture.height = Math.round(video.videoHeight * scale);
+      lastCaptureWidth = capture.width;
+      lastCaptureHeight = capture.height;
+      const ctx = capture.getContext("2d");
+      ctx.drawImage(video, 0, 0, capture.width, capture.height);
+      return new Promise((resolve) => capture.toBlob(resolve, "image/jpeg", 0.72));
+    }
+
+    function renderResult(data) {
+      faceCount.textContent = data.face_count;
+      results.innerHTML = "";
+      data.faces.forEach((face) => {
+        const match = face.match;
+        const div = document.createElement("div");
+        div.className = "person";
+        const label = match.matched ? match.name : "Unknown";
+        div.innerHTML = `
+          <strong class="${match.matched ? "ok" : "bad"}">${label}</strong>
+          <span>Score ${match.score.toFixed(3)} | Detection ${face.det_score.toFixed(3)}</span>
+        `;
+        results.appendChild(div);
+      });
+      drawOverlay(data);
+    }
+
+    function updateGate(data) {
+      if (!data.faces.length) {
+        lastCandidate = null;
+        stableCount = 0;
+        setGateState("scanning", "SCANNING", "No face detected.");
+        return;
+      }
+
+      const bestFace = data.faces
+        .slice()
+        .sort((a, b) => b.match.score - a.match.score)[0];
+      const match = bestFace.match;
+      const candidate = match.matched ? match.name : "Unknown";
+
+      if (candidate === lastCandidate) {
+        stableCount += 1;
+      } else {
+        lastCandidate = candidate;
+        stableCount = 1;
+      }
+
+      const requiredFrames = Math.max(1, Math.min(5, Number(confirmInput.value) || 2));
+      if (stableCount < requiredFrames) {
+        setGateState("scanning", "VERIFYING", `${candidate} ${stableCount}/${requiredFrames} frames.`);
+        return;
+      }
+
+      if (match.matched) {
+        setGateState("granted", "ACCESS GRANTED", `${match.name} | score ${match.score.toFixed(3)}`);
+        addEvent("granted", match.name, match.score);
+      } else {
+        setGateState("denied", "ACCESS DENIED", `Unknown face | score ${match.score.toFixed(3)}`);
+        addEvent("denied", "Unknown", match.score);
+      }
+    }
+
+    function setGateState(state, title, detail) {
+      gateBanner.className = `gate-banner ${state}`;
+      gateTitle.textContent = title;
+      gateDetail.textContent = detail;
+    }
+
+    function addEvent(state, name, score) {
+      const now = Date.now();
+      const key = `${state}:${name}`;
+      if (key === lastEventKey && now - lastEventAt < 3000) {
+        return;
+      }
+      lastEventKey = key;
+      lastEventAt = now;
+
+      const div = document.createElement("div");
+      div.className = `event ${state}`;
+      const time = new Date(now).toLocaleTimeString();
+      div.innerHTML = `${state === "granted" ? "Granted" : "Denied"}: ${name}<span>${time} | score ${score.toFixed(3)}</span>`;
+      events.prepend(div);
+
+      while (events.children.length > 20) {
+        events.removeChild(events.lastChild);
+      }
+    }
+
+    function updateRealtimeStats(data) {
+      latency.textContent = `${Math.round(data.processing_ms || 0)} ms`;
+      const elapsedSeconds = Math.max(0.001, (performance.now() - statsStartedAt) / 1000);
+      fps.textContent = (completedChecks / elapsedSeconds).toFixed(1);
+    }
+
+    function drawOverlay(data) {
+      const rect = video.getBoundingClientRect();
+      overlay.width = rect.width * window.devicePixelRatio;
+      overlay.height = rect.height * window.devicePixelRatio;
+      overlay.style.width = `${rect.width}px`;
+      overlay.style.height = `${rect.height}px`;
+
+      const ctx = overlay.getContext("2d");
+      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+      ctx.clearRect(0, 0, rect.width, rect.height);
+
+      const sourceWidth = data.image_width || lastCaptureWidth || video.videoWidth;
+      const sourceHeight = data.image_height || lastCaptureHeight || video.videoHeight;
+      const scale = Math.min(rect.width / sourceWidth, rect.height / sourceHeight);
+      const shownWidth = sourceWidth * scale;
+      const shownHeight = sourceHeight * scale;
+      const offsetX = (rect.width - shownWidth) / 2;
+      const offsetY = (rect.height - shownHeight) / 2;
+
+      data.faces.forEach((face) => {
+        const [x1, y1, x2, y2] = face.bbox;
+        const match = face.match;
+        const color = match.matched ? "#5eead4" : "#fb7185";
+        const label = `${match.matched ? match.name : "Unknown"} ${match.score.toFixed(2)}`;
+        const x = offsetX + x1 * scale;
+        const y = offsetY + y1 * scale;
+        const w = (x2 - x1) * scale;
+        const h = (y2 - y1) * scale;
+
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 3;
+        ctx.strokeRect(x, y, w, h);
+        ctx.font = "700 18px Arial";
+        const textWidth = ctx.measureText(label).width + 14;
+        ctx.fillStyle = color;
+        ctx.fillRect(x, Math.max(0, y - 28), textWidth, 26);
+        ctx.fillStyle = "#071014";
+        ctx.fillText(label, x + 7, Math.max(18, y - 9));
+      });
+    }
+
+    startBtn.addEventListener("click", () => startCamera().catch((error) => {
+      statusEl.textContent = `Camera error: ${error.message}`;
+    }));
+    stopBtn.addEventListener("click", stopCamera);
+    singleBtn.addEventListener("click", checkFrame);
+    intervalInput.addEventListener("change", scheduleChecks);
+    reloadBtn.addEventListener("click", async () => {
+      statusEl.textContent = "Reloading database...";
+      const res = await fetch("/reload-db", { method: "POST" });
+      const data = await res.json();
+      peopleCount.textContent = data.people.length;
+      statusEl.textContent = `Reloaded ${data.people.length} people.`;
+    });
+    window.addEventListener("resize", () => drawOverlay(lastResponse));
+
+    loadPeople().catch((error) => {
+      statusEl.textContent = `API error: ${error.message}`;
+    });
+    loadRuntime().catch((error) => {
+      runtime.textContent = `Runtime: ${error.message}`;
+    });
+    if (navigator.mediaDevices) {
+      loadCameras().catch(() => {});
+    }
+  </script>
+</body>
+</html>

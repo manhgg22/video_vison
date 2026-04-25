@@ -1,0 +1,8 @@
+Cython>=0.29.28
+cmake>=3.22.3    
+numpy>=1.22.3
+opencv-python>=4.8.0
+onnxruntime>=1.16.0
+fastapi>=0.110.0
+uvicorn>=0.27.0
+python-multipart>=0.0.9
